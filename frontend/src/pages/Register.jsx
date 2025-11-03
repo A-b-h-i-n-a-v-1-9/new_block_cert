@@ -1,5 +1,4 @@
-// src/pages/Register.jsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { registerForEvent } from '../services/events';
 import QRModal from '../components/QRModal';
@@ -16,6 +15,18 @@ const Register = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
   const [registrationToken, setRegistrationToken] = useState('');
+  const [eventId, setEventId] = useState('');
+
+  useEffect(() => {
+    console.log('Event ID from URL params:', id);
+    if (id && id !== 'undefined') {
+      setEventId(id);
+    } else {
+      console.error('Invalid event ID in URL:', id);
+      alert('Invalid event. Please go back and try again.');
+      navigate('/');
+    }
+  }, [id, navigate]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -24,28 +35,69 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!eventId || eventId === 'undefined') {
+      alert('Invalid event. Please go back and try again.');
+      return;
+    }
+
     setIsSubmitting(true);
     
     try {
-      // Mock registration
-      const response = await registerForEvent(id, formData);
-      setRegistrationToken(response.token);
+      console.log('Registering for event:', eventId, 'with data:', formData);
+      
+      const response = await registerForEvent(eventId, formData);
+      console.log('Registration response:', response);
+      
+      const token = response.qrToken || response.token;
+      setRegistrationToken(token);
       
       // Save to localStorage
       const myEvents = JSON.parse(localStorage.getItem('myEvents') || '[]');
       localStorage.setItem('myEvents', JSON.stringify([
         ...myEvents,
-        { eventId: id, ...formData, token: response.token, date: new Date().toISOString() }
+        { 
+          eventId: eventId, 
+          ...formData, 
+          token: token, 
+          date: new Date().toISOString() 
+        }
       ]));
       
       setShowQRModal(true);
     } catch (error) {
       console.error('Registration failed:', error);
-      alert('Registration failed. Please try again.');
+      alert(`Registration failed: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  // ADD THIS FUNCTION - Handle modal close with redirect
+  const handleModalClose = () => {
+    setShowQRModal(false);
+    // Redirect to events page after 1 second
+    setTimeout(() => {
+      navigate('/');
+    }, 1000);
+  };
+
+  if (!eventId || eventId === 'undefined') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-red-600 mb-4">Event Not Found</h2>
+          <p className="text-gray-600 mb-4">The event ID is missing or invalid.</p>
+          <button
+            onClick={() => navigate('/')}
+            className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+          >
+            Back to Events
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (isSubmitting) {
     return <Loader />;
@@ -54,7 +106,6 @@ const Register = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md mx-auto bg-white rounded-xl shadow-2xl overflow-hidden">
-        {/* Header matching certificate style */}
         <div className="bg-gradient-to-r from-indigo-600 to-purple-600 py-6 px-8">
           <h1 className="text-2xl font-bold text-white text-center">Qdemy</h1>
           <p className="text-white text-center mt-2 uppercase text-sm tracking-wider">
@@ -129,12 +180,13 @@ const Register = () => {
         </form>
       </div>
 
+      {/* UPDATE: Use the new handleModalClose function */}
       <QRModal 
         isOpen={showQRModal}
-        onClose={() => setShowQRModal(false)}
+        onClose={handleModalClose}  // Changed this line
         token={registrationToken}
         userName={formData.name}
-        eventId={id}
+        eventId={eventId}
       />
     </div>
   );

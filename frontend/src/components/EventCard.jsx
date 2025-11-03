@@ -71,12 +71,13 @@ const EventCard = ({ event }) => {
               />
             </svg>
             <span>
-              {event.registered}/{event.capacity} attendees
+              {event.registered || 0}/{event.capacity} attendees
             </span>
           </div>
         </div>
+        {/* FIX: Change event.id to event._id */}
         <Link
-          to={`/register/${event.id}`}
+          to={`/register/${event._id}`}
           className="block w-full bg-primary-500 hover:bg-primary-600 text-white text-center py-2 px-4 rounded-md transition-colors duration-300"
         >
           Register Now
